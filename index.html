@@ -27,7 +27,7 @@ html * { font-family:'Google Sans','Segoe UI',system-ui,sans-serif; }
 /* ── Slideshow ─────────────────────────────────────────────────────────── */
 #screen-slideshow{background:#000}
 #card-wrap{position:absolute;inset:0;overflow:hidden;cursor:pointer}
-#nav-prev,#nav-next{position:absolute;top:0;height:100%;width:20%;z-index:10;background:#0000002e;border:none;cursor:pointer;-webkit-tap-highlight-color:transparent;outline:none}
+#nav-prev,#nav-next{position:absolute;top:0;height:100%;width:20%;z-index:10;background:#0000002e;border:none;cursor:pointer;-webkit-tap-highlight-color:transparent;outline:none;transition:opacity 0.4s}
 #nav-prev{left:0}
 #nav-next{right:0}
 #btn-mute{position:absolute;top:14px;left:50%;transform:translateX(-50%);z-index:20;background:rgba(0,0,0,0.32);border:none;border-radius:50%;width:48px;height:48px;cursor:pointer;color:#fff;font-size:1.5rem;line-height:48px;text-align:center;-webkit-tap-highlight-color:transparent;outline:none;transition:background 0.15s}
@@ -257,10 +257,23 @@ function showCard(newIdx, direction) {
 // ── Navigation delay ──────────────────────────────────────────────────────────
 var navDelay  = cfg.navigationDelay || 0;
 var navLocked = false;
+var navPrevBtn = document.getElementById('nav-prev');
+var navNextBtn = document.getElementById('nav-next');
+
 function lockNav() {
   if (!navDelay) return;
   navLocked = true;
-  setTimeout(function() { navLocked = false; }, navDelay);
+  navPrevBtn.style.opacity = '0';
+  navPrevBtn.style.pointerEvents = 'none';
+  navNextBtn.style.opacity = '0';
+  navNextBtn.style.pointerEvents = 'none';
+  setTimeout(function() {
+    navLocked = false;
+    navPrevBtn.style.opacity = '1';
+    navPrevBtn.style.pointerEvents = '';
+    navNextBtn.style.opacity = '1';
+    navNextBtn.style.pointerEvents = '';
+  }, navDelay);
 }
 
 function goNext() { if (!animating && !navLocked) { lockNav(); showCard((idx + 1) % items.length, 'next'); } }
@@ -293,6 +306,7 @@ function startSlideshow(selectedItems) {
   idx   = 0;
   wrap.innerHTML = '';
   showScreen('screen-slideshow');
+  lockNav();
   showCard(0, null);
 }
 
