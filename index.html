@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#0f172a">
+<title>Vocabulator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;700;800;900&display=swap">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{width:100%;height:100%;overflow:hidden;background:#0f172a;color:#fff;touch-action:manipulation}
+html * { font-family:'Google Sans','Segoe UI',system-ui,sans-serif; }
+.screen{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center}
+.screen.active{display:flex}
+
+
+
+/* ── Picker ────────────────────────────────────────────────────────────── */
+#screen-picker.active{display:flex;flex-direction:column;width:100vw;height:100vh;padding:0;background:#000}
+#category-grid{width:100%;flex:1;display:grid;grid-template-columns:repeat(2,1fr);grid-auto-rows:1fr;gap:3px;max-height:none}
+.cat-btn{border:none;border-radius:0;color:#fff;font-size:clamp(1.6rem,7vw,3.2rem);font-weight:900;letter-spacing:0.04em;text-transform:uppercase;cursor:pointer;text-align:center;transition:opacity 0.1s;user-select:none}
+.cat-btn:active{opacity:0.75}
+#category-grid .cat-btn:last-child:nth-child(odd){grid-column:1/-1}
+
+/* ── Slideshow ─────────────────────────────────────────────────────────── */
+#screen-slideshow{background:#000}
+#card-wrap{position:absolute;inset:0;overflow:hidden;cursor:pointer}
+
+/* Card shared */
+.card{position:absolute;inset:0;display:flex;flex-direction:column;user-select:none;will-change:transform}
+
+/* With image */
+.card-has-image .card-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;pointer-events:none}
+.card-has-image .card-label{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(to top,rgba(0,0,0,0.88) 0%,rgba(0,0,0,0.3) 100%);padding:1.5rem 1rem 2.5rem;text-align:center;display:flex;flex-direction:column;gap:0.3rem}
+
+/* Without image */
+.card-no-image{align-items:center;justify-content:center;background:linear-gradient(135deg,#1e3a5f 0%,#0f172a 100%)}
+.card-no-image .card-label{text-align:center;padding:2rem;display:flex;flex-direction:column;gap:0.6rem}
+
+/* Color card — background IS the content */
+.card-color{align-items:center;justify-content:center}
+.card-color .card-label{text-align:center;padding:2rem;display:flex;flex-direction:column;gap:0.6rem}
+.card-color .lbl-fi,.card-color .lbl-en,.card-color .lbl-single{color:inherit}
+
+/* Number card */
+.card-number{background:#333;flex-direction:column;align-items:center;justify-content:center}
+.card-number-digit{font-size:55vh;font-weight:900;color:#fff;line-height:0.85;text-align:center;margin-bottom:40px;}
+.card-number .card-label{text-align:center;padding:0.5rem 1rem 2rem;display:flex;flex-direction:column;gap:0.3rem}
+
+/* Label sizes — with image */
+.lbl-fi{font-size:clamp(2.5rem,10vmin,5rem);font-weight:800;color:#f1f5f9;line-height:1.1;letter-spacing:-0.01em}
+.lbl-en{font-size:clamp(1.8rem,7vmin,3.5rem);font-weight:600;color:#94a3b8;line-height:1.1}
+.lbl-single{font-size:clamp(3rem,12vmin,6rem);font-weight:800;color:#f1f5f9;line-height:1.1}
+
+/* Label sizes — without image or color card (larger) */
+.card-no-image .lbl-fi,.card-color .lbl-fi{font-size:clamp(3.5rem,15vmin,8rem)}
+.card-no-image .lbl-en,.card-color .lbl-en{font-size:clamp(2.5rem,10vmin,5rem)}
+.card-no-image .lbl-single,.card-color .lbl-single{font-size:clamp(4rem,18vmin,9rem)}
+
+
+/* Swipe animations */
+@keyframes fromRight{from{transform:translateX(100%)}to{transform:translateX(0)}}
+@keyframes fromLeft {from{transform:translateX(-100%)}to{transform:translateX(0)}}
+@keyframes toLeft   {from{transform:translateX(0)}to{transform:translateX(-100%)}}
+@keyframes toRight  {from{transform:translateX(0)}to{transform:translateX(100%)}}
+.anim-in-next {animation:fromRight 0.28s ease-out both}
+.anim-out-next{animation:toLeft   0.28s ease-out both}
+.anim-in-prev {animation:fromLeft  0.28s ease-out both}
+.anim-out-prev{animation:toRight   0.28s ease-out both}
+
+/* ── Image fade-in ──────────────────────────────────────────────────────── */
+.card-img{opacity:0;transition:opacity 0.35s ease}
+.card-img.img-ready{opacity:1}
+
+/* ── Landscape layout ───────────────────────────────────────────────────── */
+
+</style>
+</head>
+<body>
+
+<div id="screen-picker" class="screen active">
+  <div id="category-grid"></div>
+</div>
+
+<div id="screen-slideshow" class="screen">
+  <div id="card-wrap"></div>
+</div>
+
+<script>
+var DATA = {"config":{"english":true,"finnish":true,"font":"Google Sans","tilesBgs":[{"bg":"#4C6EF5","fg":"#F8FAFC"},{"bg":"#6D72E1","fg":"#F8FAFC"},{"bg":"#2AA79B","fg":"#F0FDFA"},{"bg":"#D9A441","fg":"#1F2937"},{"bg":"#D96A7A","fg":"#FDF2F8"},{"bg":"#7B8A9A","fg":"#F8FAFC"}]},"categories":[{"name":"Animals","items":[{"id":"bear","english":"bear","finnish":"karhu","color":"","number":"","image":"assets/images/bear.jpg","audio_en":"assets/audio/bear-en.mp3","audio_fi":"assets/audio/bear-fi.mp3"},{"id":"bird","english":"bird","finnish":"lintu","color":"","number":"","image":"assets/images/bird.jpg","audio_en":"assets/audio/bird-en.mp3","audio_fi":"assets/audio/bird-fi.mp3"},{"id":"butterfly","english":"butterfly","finnish":"perhonen","color":"","number":"","image":"assets/images/butterfly.jpg","audio_en":"assets/audio/butterfly-en.mp3","audio_fi":"assets/audio/butterfly-fi.mp3"},{"id":"cat","english":"cat","finnish":"kissa","color":"","number":"","image":"assets/images/cat.jpg","audio_en":"assets/audio/cat-en.mp3","audio_fi":"assets/audio/cat-fi.mp3"},{"id":"cow","english":"cow","finnish":"lehmä","color":"","number":"","image":"assets/images/cow.jpg","audio_en":"assets/audio/cow-en.mp3","audio_fi":"assets/audio/cow-fi.mp3"},{"id":"dog","english":"dog","finnish":"koira","color":"","number":"","image":"assets/images/dog.jpg","audio_en":"assets/audio/dog-en.mp3","audio_fi":"assets/audio/dog-fi.mp3"},{"id":"duck","english":"duck","finnish":"ankka","color":"","number":"","image":"assets/images/duck.jpg","audio_en":"assets/audio/duck-en.mp3","audio_fi":"assets/audio/duck-fi.mp3"},{"id":"elephant","english":"elephant","finnish":"norsu","color":"","number":"","image":"assets/images/elephant.jpg","audio_en":"assets/audio/elephant-en.mp3","audio_fi":"assets/audio/elephant-fi.mp3"},{"id":"fish","english":"fish","finnish":"kala","color":"","number":"","image":"assets/images/fish.jpg","audio_en":"assets/audio/fish-en.mp3","audio_fi":"assets/audio/fish-fi.mp3"},{"id":"frog","english":"frog","finnish":"sammakko","color":"","number":"","image":"assets/images/frog.jpg","audio_en":"assets/audio/frog-en.mp3","audio_fi":"assets/audio/frog-fi.mp3"},{"id":"horse","english":"horse","finnish":"hevonen","color":"","number":"","image":"assets/images/horse.jpg","audio_en":"assets/audio/horse-en.mp3","audio_fi":"assets/audio/horse-fi.mp3"},{"id":"lion","english":"lion","finnish":"leijona","color":"","number":"","image":"assets/images/lion.jpg","audio_en":"assets/audio/lion-en.mp3","audio_fi":"assets/audio/lion-fi.mp3"},{"id":"monkey","english":"monkey","finnish":"apina","color":"","number":"","image":"assets/images/monkey.jpg","audio_en":"assets/audio/monkey-en.mp3","audio_fi":"assets/audio/monkey-fi.mp3"},{"id":"pig","english":"pig","finnish":"sika","color":"","number":"","image":"assets/images/pig.jpg","audio_en":"assets/audio/pig-en.mp3","audio_fi":"assets/audio/pig-fi.mp3"},{"id":"rabbit","english":"rabbit","finnish":"kani","color":"","number":"","image":"assets/images/rabbit.jpg","audio_en":"assets/audio/rabbit-en.mp3","audio_fi":"assets/audio/rabbit-fi.mp3"}]},{"name":"Colors","items":[{"id":"black","english":"black","finnish":"musta","color":"#212121","number":"","image":"","audio_en":"assets/audio/black-en.mp3","audio_fi":"assets/audio/black-fi.mp3"},{"id":"blue","english":"blue","finnish":"sininen","color":"#2196F3","number":"","image":"","audio_en":"assets/audio/blue-en.mp3","audio_fi":"assets/audio/blue-fi.mp3"},{"id":"brown","english":"brown","finnish":"ruskea","color":"#795548","number":"","image":"","audio_en":"assets/audio/brown-en.mp3","audio_fi":"assets/audio/brown-fi.mp3"},{"id":"gray","english":"gray","finnish":"harmaa","color":"#9E9E9E","number":"","image":"","audio_en":"assets/audio/gray-en.mp3","audio_fi":"assets/audio/gray-fi.mp3"},{"id":"green","english":"green","finnish":"vihreä","color":"#4CAF50","number":"","image":"","audio_en":"assets/audio/green-en.mp3","audio_fi":"assets/audio/green-fi.mp3"},{"id":"orange","english":"orange","finnish":"oranssi","color":"#FF9800","number":"","image":"","audio_en":"assets/audio/orange-en.mp3","audio_fi":"assets/audio/orange-fi.mp3"},{"id":"pink","english":"pink","finnish":"vaaleanpunainen","color":"#E91E63","number":"","image":"","audio_en":"assets/audio/pink-en.mp3","audio_fi":"assets/audio/pink-fi.mp3"},{"id":"purple","english":"purple","finnish":"violetti","color":"#9C27B0","number":"","image":"","audio_en":"assets/audio/purple-en.mp3","audio_fi":"assets/audio/purple-fi.mp3"},{"id":"red","english":"red","finnish":"punainen","color":"#F44336","number":"","image":"","audio_en":"assets/audio/red-en.mp3","audio_fi":"assets/audio/red-fi.mp3"},{"id":"white","english":"white","finnish":"valkoinen","color":"#F5F5F5","number":"","image":"","audio_en":"assets/audio/white-en.mp3","audio_fi":"assets/audio/white-fi.mp3"},{"id":"yellow","english":"yellow","finnish":"keltainen","color":"#FFC107","number":"","image":"","audio_en":"assets/audio/yellow-en.mp3","audio_fi":"assets/audio/yellow-fi.mp3"}]},{"name":"Family","items":[{"id":"Alae","english":"Alae","finnish":"Alae","color":"","number":"","image":"assets/images/alae.jpg","audio_en":"assets/audio/alae-en.mp3","audio_fi":"assets/audio/alae-fi.mp3"},{"id":"Eilaf","english":"Eilaf","finnish":"Eilaf","color":"","number":"","image":"assets/images/eilaf.jpg","audio_en":"assets/audio/eilaf-en.mp3","audio_fi":"assets/audio/eilaf-fi.mp3"},{"id":"father","english":"father","finnish":"isä","color":"","number":"","image":"assets/images/father.jpg","audio_en":"assets/audio/father-en.mp3","audio_fi":"assets/audio/father-fi.mp3"},{"id":"mother","english":"mother","finnish":"äiti","color":"","number":"","image":"assets/images/mother.jpg","audio_en":"assets/audio/mother-en.mp3","audio_fi":"assets/audio/mother-fi.mp3"}]},{"name":"Food","items":[{"id":"apple","english":"apple","finnish":"omena","color":"","number":"","image":"assets/images/apple.jpg","audio_en":"assets/audio/apple-en.mp3","audio_fi":"assets/audio/apple-fi.mp3"},{"id":"banana","english":"banana","finnish":"banaani","color":"","number":"","image":"assets/images/banana.jpg","audio_en":"assets/audio/banana-en.mp3","audio_fi":"assets/audio/banana-fi.mp3"},{"id":"bread","english":"bread","finnish":"leipä","color":"","number":"","image":"assets/images/bread.jpg","audio_en":"assets/audio/bread-en.mp3","audio_fi":"assets/audio/bread-fi.mp3"},{"id":"carrot","english":"carrot","finnish":"porkkana","color":"","number":"","image":"assets/images/carrot.jpg","audio_en":"assets/audio/carrot-en.mp3","audio_fi":"assets/audio/carrot-fi.mp3"},{"id":"cheese","english":"cheese","finnish":"juusto","color":"","number":"","image":"assets/images/cheese.jpg","audio_en":"assets/audio/cheese-en.mp3","audio_fi":"assets/audio/cheese-fi.mp3"},{"id":"egg","english":"egg","finnish":"muna","color":"","number":"","image":"assets/images/egg.jpg","audio_en":"assets/audio/egg-en.mp3","audio_fi":"assets/audio/egg-fi.mp3"},{"id":"milk","english":"milk","finnish":"maito","color":"","number":"","image":"assets/images/milk.jpg","audio_en":"assets/audio/milk-en.mp3","audio_fi":"assets/audio/milk-fi.mp3"},{"id":"orange","english":"orange","finnish":"appelsiini","color":"","number":"","image":"assets/images/orange.jpg","audio_en":"assets/audio/orange-en.mp3","audio_fi":"assets/audio/orange-fi.mp3"},{"id":"pizza","english":"pizza","finnish":"pizza","color":"","number":"","image":"assets/images/pizza.jpg","audio_en":"assets/audio/pizza-en.mp3","audio_fi":"assets/audio/pizza-fi.mp3"},{"id":"potato","english":"potato","finnish":"peruna","color":"","number":"","image":"assets/images/potato.jpg","audio_en":"assets/audio/potato-en.mp3","audio_fi":"assets/audio/potato-fi.mp3"},{"id":"rice","english":"rice","finnish":"riisi","color":"","number":"","image":"assets/images/rice.jpg","audio_en":"assets/audio/rice-en.mp3","audio_fi":"assets/audio/rice-fi.mp3"},{"id":"strawberry","english":"strawberry","finnish":"mansikka","color":"","number":"","image":"assets/images/strawberry.jpg","audio_en":"assets/audio/strawberry-en.mp3","audio_fi":"assets/audio/strawberry-fi.mp3"},{"id":"tomato","english":"tomato","finnish":"tomaatti","color":"","number":"","image":"assets/images/tomato.jpg","audio_en":"assets/audio/tomato-en.mp3","audio_fi":"assets/audio/tomato-fi.mp3"},{"id":"watermelon","english":"watermelon","finnish":"vesimeloni","color":"","number":"","image":"assets/images/watermelon.jpg","audio_en":"assets/audio/watermelon-en.mp3","audio_fi":"assets/audio/watermelon-fi.mp3"}]},{"name":"Numbers","items":[{"id":"01","english":"one","finnish":"yksi","color":"","number":"1","image":"assets/images/01.jpg","audio_en":"assets/audio/01-en.mp3","audio_fi":"assets/audio/01-fi.mp3"},{"id":"02","english":"two","finnish":"kaksi","color":"","number":"2","image":"assets/images/02.jpg","audio_en":"assets/audio/02-en.mp3","audio_fi":"assets/audio/02-fi.mp3"},{"id":"03","english":"three","finnish":"kolme","color":"","number":"3","image":"assets/images/03.jpg","audio_en":"assets/audio/03-en.mp3","audio_fi":"assets/audio/03-fi.mp3"},{"id":"04","english":"four","finnish":"neljä","color":"","number":"4","image":"assets/images/04.jpg","audio_en":"assets/audio/04-en.mp3","audio_fi":"assets/audio/04-fi.mp3"},{"id":"05","english":"five","finnish":"viisi","color":"","number":"5","image":"assets/images/05.jpg","audio_en":"assets/audio/05-en.mp3","audio_fi":"assets/audio/05-fi.mp3"},{"id":"06","english":"six","finnish":"kuusi","color":"","number":"6","image":"assets/images/06.jpg","audio_en":"assets/audio/06-en.mp3","audio_fi":"assets/audio/06-fi.mp3"},{"id":"07","english":"seven","finnish":"seitsemän","color":"","number":"7","image":"assets/images/07.jpg","audio_en":"assets/audio/07-en.mp3","audio_fi":"assets/audio/07-fi.mp3"},{"id":"08","english":"eight","finnish":"kahdeksan","color":"","number":"8","image":"assets/images/08.jpg","audio_en":"assets/audio/08-en.mp3","audio_fi":"assets/audio/08-fi.mp3"},{"id":"09","english":"nine","finnish":"yhdeksän","color":"","number":"9","image":"assets/images/09.jpg","audio_en":"assets/audio/09-en.mp3","audio_fi":"assets/audio/09-fi.mp3"},{"id":"10","english":"ten","finnish":"kymmenen","color":"","number":"10","image":"assets/images/10.jpg","audio_en":"assets/audio/10-en.mp3","audio_fi":"assets/audio/10-fi.mp3"},{"id":"11","english":"eleven","finnish":"yksitoista","color":"","number":"11","image":"assets/images/11.jpg","audio_en":"assets/audio/11-en.mp3","audio_fi":"assets/audio/11-fi.mp3"},{"id":"12","english":"twelve","finnish":"kaksitoista","color":"","number":"12","image":"assets/images/12.jpg","audio_en":"assets/audio/12-en.mp3","audio_fi":"assets/audio/12-fi.mp3"},{"id":"13","english":"thirteen","finnish":"kolmetoista","color":"","number":"13","image":"assets/images/13.jpg","audio_en":"assets/audio/13-en.mp3","audio_fi":"assets/audio/13-fi.mp3"},{"id":"14","english":"fourteen","finnish":"neljätoista","color":"","number":"14","image":"assets/images/14.jpg","audio_en":"assets/audio/14-en.mp3","audio_fi":"assets/audio/14-fi.mp3"},{"id":"15","english":"fifteen","finnish":"viisitoista","color":"","number":"15","image":"assets/images/15.jpg","audio_en":"assets/audio/15-en.mp3","audio_fi":"assets/audio/15-fi.mp3"},{"id":"16","english":"sixteen","finnish":"kuusitoista","color":"","number":"16","image":"assets/images/16.jpg","audio_en":"assets/audio/16-en.mp3","audio_fi":"assets/audio/16-fi.mp3"},{"id":"17","english":"seventeen","finnish":"seitsemäntoista","color":"","number":"17","image":"assets/images/17.jpg","audio_en":"assets/audio/17-en.mp3","audio_fi":"assets/audio/17-fi.mp3"},{"id":"18","english":"eighteen","finnish":"kahdeksantoista","color":"","number":"18","image":"assets/images/18.jpg","audio_en":"assets/audio/18-en.mp3","audio_fi":"assets/audio/18-fi.mp3"},{"id":"19","english":"nineteen","finnish":"yhdeksäntoista","color":"","number":"19","image":"assets/images/19.jpg","audio_en":"assets/audio/19-en.mp3","audio_fi":"assets/audio/19-fi.mp3"},{"id":"20","english":"twenty","finnish":"kaksikymmentä","color":"","number":"20","image":"assets/images/20.jpg","audio_en":"assets/audio/20-en.mp3","audio_fi":"assets/audio/20-fi.mp3"},{"id":"21","english":"twenty-one","finnish":"kaksikymmentäyksi","color":"","number":"21","image":"assets/images/21.jpg","audio_en":"assets/audio/21-en.mp3","audio_fi":"assets/audio/21-fi.mp3"},{"id":"22","english":"twenty-two","finnish":"kaksikymmentäkaksi","color":"","number":"22","image":"assets/images/22.jpg","audio_en":"assets/audio/22-en.mp3","audio_fi":"assets/audio/22-fi.mp3"},{"id":"23","english":"twenty-three","finnish":"kaksikymmentäkolme","color":"","number":"23","image":"assets/images/23.jpg","audio_en":"assets/audio/23-en.mp3","audio_fi":"assets/audio/23-fi.mp3"},{"id":"24","english":"twenty-four","finnish":"kaksikymmentäneljä","color":"","number":"24","image":"assets/images/24.jpg","audio_en":"assets/audio/24-en.mp3","audio_fi":"assets/audio/24-fi.mp3"},{"id":"25","english":"twenty-five","finnish":"kaksikymmentäviisi","color":"","number":"25","image":"assets/images/25.jpg","audio_en":"assets/audio/25-en.mp3","audio_fi":"assets/audio/25-fi.mp3"},{"id":"26","english":"twenty-six","finnish":"kaksikymmentäkuusi","color":"","number":"26","image":"assets/images/26.jpg","audio_en":"assets/audio/26-en.mp3","audio_fi":"assets/audio/26-fi.mp3"},{"id":"27","english":"twenty-seven","finnish":"kaksikymmentäseitsemän","color":"","number":"27","image":"assets/images/27.jpg","audio_en":"assets/audio/27-en.mp3","audio_fi":"assets/audio/27-fi.mp3"},{"id":"28","english":"twenty-eight","finnish":"kaksikymmentäkahdeksan","color":"","number":"28","image":"assets/images/28.jpg","audio_en":"assets/audio/28-en.mp3","audio_fi":"assets/audio/28-fi.mp3"},{"id":"29","english":"twenty-nine","finnish":"kaksikymmentäyhdeksän","color":"","number":"29","image":"assets/images/29.jpg","audio_en":"assets/audio/29-en.mp3","audio_fi":"assets/audio/29-fi.mp3"},{"id":"30","english":"thirty","finnish":"kolmekymmentä","color":"","number":"30","image":"assets/images/30.jpg","audio_en":"assets/audio/30-en.mp3","audio_fi":"assets/audio/30-fi.mp3"}]}]};
+var cfg  = DATA.config;
+
+var items = [];
+var idx   = 0;
+
+// ── Audio ─────────────────────────────────────────────────────────────────────
+var currentAudio = null;
+var pendingTimer = null;
+
+function stopAudio() {
+  if (pendingTimer) { clearTimeout(pendingTimer); pendingTimer = null; }
+  if (currentAudio) { currentAudio.pause(); currentAudio = null; }
+}
+
+function playAudioFile(src, onEnded) {
+  var audio = new Audio(src);
+  currentAudio = audio;
+  audio.addEventListener('ended', function() {
+    if (currentAudio === audio) currentAudio = null;
+    if (onEnded) onEnded();
+  });
+  audio.play().catch(function() {
+    if (currentAudio === audio) currentAudio = null;
+    if (onEnded) onEnded();
+  });
+}
+
+function speakItem(item) {
+  stopAudio();
+
+  var audioFi = cfg.finnish && item.audio_fi;
+  var audioEn = cfg.english && item.audio_en;
+
+  if (audioFi) {
+    playAudioFile(audioFi, audioEn ? function() {
+      pendingTimer = setTimeout(function() { pendingTimer = null; playAudioFile(audioEn, null); }, 500);
+    } : null);
+  } else if (audioEn) {
+    playAudioFile(audioEn, null);
+  }
+}
+
+// ── Contrast helper ───────────────────────────────────────────────────────────
+function contrastText(hex) {
+  var r = parseInt(hex.slice(1, 3), 16);
+  var g = parseInt(hex.slice(3, 5), 16);
+  var b = parseInt(hex.slice(5, 7), 16);
+  return (r * 0.299 + g * 0.587 + b * 0.114) > 150 ? '#1a1a1a' : '#ffffff';
+}
+
+// ── Card builder ──────────────────────────────────────────────────────────────
+function buildCard(item) {
+  var card    = document.createElement('div');
+  card.className = 'card';
+
+  var hasBoth  = cfg.finnish && cfg.english;
+  var fiText   = cfg.finnish ? item.finnish : '';
+  var enText   = cfg.english ? item.english : '';
+
+  var labelHTML = hasBoth
+    ? '<span class="lbl-fi">' + fiText + '</span><span class="lbl-en">' + enText + '</span>'
+    : '<span class="lbl-single">' + (fiText || enText) + '</span>';
+
+  if (item.number !== '') {
+    card.classList.add('card-number');
+    var digit = document.createElement('div');
+    digit.className   = 'card-number-digit';
+    digit.textContent = item.number;
+    card.appendChild(digit);
+  } else if (item.color) {
+    card.classList.add('card-color');
+    card.style.backgroundColor = item.color;
+    card.style.color            = contrastText(item.color);
+  } else if (item.image) {
+    card.classList.add('card-has-image');
+    var img       = document.createElement('img');
+    img.className = 'card-img';
+    img.alt       = enText || fiText;
+    img.draggable = false;
+    img.onload  = function() { this.classList.add('img-ready'); };
+    img.onerror = function() {
+      card.removeChild(img);
+      card.classList.remove('card-has-image');
+      card.classList.add('card-no-image');
+    };
+    img.src = item.image;
+    if (img.complete) img.classList.add('img-ready');
+    card.appendChild(img);
+  } else {
+    card.classList.add('card-no-image');
+  }
+
+  var label       = document.createElement('div');
+  label.className = 'card-label';
+  label.innerHTML = labelHTML;
+  card.appendChild(label);
+
+  return card;
+}
+
+// ── Navigation ────────────────────────────────────────────────────────────────
+var animating = false;
+var wrap      = document.getElementById('card-wrap');
+
+function showCard(newIdx, direction) {
+  if (animating) return;
+  animating = true;
+
+  var oldCard = wrap.querySelector('.card');
+  var newCard = buildCard(items[newIdx]);
+
+  if (oldCard && direction) {
+    var outCls = direction === 'next' ? 'anim-out-next' : 'anim-out-prev';
+    var inCls  = direction === 'next' ? 'anim-in-next'  : 'anim-in-prev';
+    oldCard.classList.add(outCls);
+    newCard.classList.add(inCls);
+    wrap.appendChild(newCard);
+    setTimeout(function() { oldCard.remove(); animating = false; }, 280);
+  } else {
+    wrap.innerHTML = '';
+    wrap.appendChild(newCard);
+    animating = false;
+  }
+
+  idx = newIdx;
+  speakItem(items[idx]);
+}
+
+function goNext() { if (!animating) showCard((idx + 1) % items.length, 'next'); }
+function goPrev() { if (!animating) showCard((idx - 1 + items.length) % items.length, 'prev'); }
+
+// ── Touch / swipe ─────────────────────────────────────────────────────────────
+var txStart = 0, tyStart = 0, tMoved = false;
+
+wrap.addEventListener('touchstart', function(e) {
+  txStart = e.touches[0].clientX;
+  tyStart = e.touches[0].clientY;
+  tMoved  = false;
+}, { passive: true });
+
+wrap.addEventListener('touchmove', function(e) {
+  if (Math.abs(e.touches[0].clientX - txStart) > 8 ||
+      Math.abs(e.touches[0].clientY - tyStart) > 8) tMoved = true;
+}, { passive: true });
+
+wrap.addEventListener('touchend', function(e) {
+  var dx = e.changedTouches[0].clientX - txStart;
+  var dy = e.changedTouches[0].clientY - tyStart;
+  if (!tMoved) { speakItem(items[idx]); return; }
+  if (dy > 80 && dy > Math.abs(dx)) { stopAudio(); showScreen('screen-picker'); return; }
+  if (Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy)) { if (dx < 0) goNext(); else goPrev(); }
+});
+
+// Mouse fallback for desktop testing
+var mxStart = 0, myStart = 0, mMoved = false;
+wrap.addEventListener('mousedown', function(e) { mxStart = e.clientX; myStart = e.clientY; mMoved = false; });
+wrap.addEventListener('mousemove', function()  { mMoved = true; });
+wrap.addEventListener('mouseup',   function(e) {
+  var dx = e.clientX - mxStart;
+  var dy = e.clientY - myStart;
+  if (!mMoved) { speakItem(items[idx]); mMoved = false; return; }
+  if (dy > 80 && dy > Math.abs(dx)) { stopAudio(); showScreen('screen-picker'); mMoved = false; return; }
+  if (Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy)) { if (dx < 0) goNext(); else goPrev(); }
+  mMoved = false;
+});
+
+// Keyboard (desktop testing)
+document.addEventListener('keydown', function(e) {
+  if (!document.getElementById('screen-slideshow').classList.contains('active')) return;
+  if (e.key === 'ArrowRight') goNext();
+  if (e.key === 'ArrowLeft')  goPrev();
+  if (e.key === 'ArrowDown')  { stopAudio(); showScreen('screen-picker'); }
+  if (e.key === ' ')          speakItem(items[idx]);
+});
+
+// ── Screen management ─────────────────────────────────────────────────────────
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(function(s) { s.classList.remove('active'); });
+  document.getElementById(id).classList.add('active');
+}
+
+
+// ── Start slideshow ───────────────────────────────────────────────────────────
+function startSlideshow(selectedItems) {
+  items = selectedItems;
+  idx   = 0;
+  wrap.innerHTML = '';
+  showScreen('screen-slideshow');
+  showCard(0, null);
+}
+
+// ── Category picker ───────────────────────────────────────────────────────────
+var TILE_COLORS = DATA.config.tilesBgs && DATA.config.tilesBgs.length
+  ? DATA.config.tilesBgs
+  : [{bg:'#e63946',fg:'#fff'},{bg:'#2a9d8f',fg:'#fff'},{bg:'#e76f51',fg:'#fff'},
+     {bg:'#457b9d',fg:'#fff'},{bg:'#06d6a0',fg:'#fff'},{bg:'#f4a261',fg:'#fff'},
+     {bg:'#118ab2',fg:'#fff'},{bg:'#c77dff',fg:'#fff'}];
+
+function buildPicker() {
+  var grid = document.getElementById('category-grid');
+  DATA.categories.forEach(function(cat, i) {
+    var btn          = document.createElement('button');
+    btn.className    = 'cat-btn';
+    btn.textContent  = cat.name;
+    var tile = TILE_COLORS[i % TILE_COLORS.length];
+    btn.style.background = tile.bg;
+    btn.style.color      = tile.fg;
+    btn.addEventListener('click', function() { startSlideshow(cat.items.slice()); });
+    grid.appendChild(btn);
+  });
+
+  var rnd          = document.createElement('button');
+  rnd.className    = 'cat-btn';
+  rnd.textContent  = 'Random';
+  var rndTile = TILE_COLORS[DATA.categories.length % TILE_COLORS.length];
+  rnd.style.background = rndTile.bg;
+  rnd.style.color      = rndTile.fg;
+  rnd.addEventListener('click', function() {
+    var all = DATA.categories.reduce(function(acc, c) { return acc.concat(c.items); }, []);
+    for (var i = all.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var t = all[i]; all[i] = all[j]; all[j] = t;
+    }
+    startSlideshow(all);
+  });
+  grid.appendChild(rnd);
+}
+
+// ── Boot ──────────────────────────────────────────────────────────────────────
+buildPicker();
+showScreen('screen-picker');
+</script>
+</body>
+</html>
