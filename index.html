@@ -27,6 +27,9 @@ html * { font-family:'Google Sans','Segoe UI',system-ui,sans-serif; }
 /* ── Slideshow ─────────────────────────────────────────────────────────── */
 #screen-slideshow{background:#000}
 #card-wrap{position:absolute;inset:0;overflow:hidden;cursor:pointer}
+#nav-prev,#nav-next{position:absolute;top:0;height:100%;width:20%;z-index:10;background:transparent;border:none;cursor:pointer;-webkit-tap-highlight-color:transparent;outline:none}
+#nav-prev{left:0}
+#nav-next{right:0}
 
 /* Card shared */
 .card{position:absolute;inset:0;display:flex;flex-direction:column;user-select:none;will-change:transform}
@@ -85,7 +88,9 @@ html * { font-family:'Google Sans','Segoe UI',system-ui,sans-serif; }
 </div>
 
 <div id="screen-slideshow" class="screen">
+  <button id="nav-prev"></button>
   <div id="card-wrap"></div>
+  <button id="nav-next"></button>
 </div>
 
 <script>
@@ -221,47 +226,17 @@ function showCard(newIdx, direction) {
 function goNext() { if (!animating) showCard((idx + 1) % items.length, 'next'); }
 function goPrev() { if (!animating) showCard((idx - 1 + items.length) % items.length, 'prev'); }
 
-// ── Touch / swipe ─────────────────────────────────────────────────────────────
-var txStart = 0, tyStart = 0, tMoved = false;
+// ── Navigation controls ───────────────────────────────────────────────────────
+wrap.addEventListener('click', function() { speakItem(items[idx]); });
 
-wrap.addEventListener('touchstart', function(e) {
-  txStart = e.touches[0].clientX;
-  tyStart = e.touches[0].clientY;
-  tMoved  = false;
-}, { passive: true });
+document.getElementById('nav-prev').addEventListener('click', function() { goPrev(); });
+document.getElementById('nav-next').addEventListener('click', function() { goNext(); });
 
-wrap.addEventListener('touchmove', function(e) {
-  if (Math.abs(e.touches[0].clientX - txStart) > 8 ||
-      Math.abs(e.touches[0].clientY - tyStart) > 8) tMoved = true;
-}, { passive: true });
-
-wrap.addEventListener('touchend', function(e) {
-  var dx = e.changedTouches[0].clientX - txStart;
-  var dy = e.changedTouches[0].clientY - tyStart;
-  if (!tMoved) { speakItem(items[idx]); return; }
-  if (dy > 80 && dy > Math.abs(dx)) { stopAudio(); showScreen('screen-picker'); return; }
-  if (Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy)) { if (dx < 0) goNext(); else goPrev(); }
-});
-
-// Mouse fallback for desktop testing
-var mxStart = 0, myStart = 0, mMoved = false;
-wrap.addEventListener('mousedown', function(e) { mxStart = e.clientX; myStart = e.clientY; mMoved = false; });
-wrap.addEventListener('mousemove', function()  { mMoved = true; });
-wrap.addEventListener('mouseup',   function(e) {
-  var dx = e.clientX - mxStart;
-  var dy = e.clientY - myStart;
-  if (!mMoved) { speakItem(items[idx]); mMoved = false; return; }
-  if (dy > 80 && dy > Math.abs(dx)) { stopAudio(); showScreen('screen-picker'); mMoved = false; return; }
-  if (Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy)) { if (dx < 0) goNext(); else goPrev(); }
-  mMoved = false;
-});
-
-// Keyboard (desktop testing)
+// Keyboard
 document.addEventListener('keydown', function(e) {
   if (!document.getElementById('screen-slideshow').classList.contains('active')) return;
   if (e.key === 'ArrowRight') goNext();
   if (e.key === 'ArrowLeft')  goPrev();
-  if (e.key === 'ArrowDown')  { stopAudio(); showScreen('screen-picker'); }
   if (e.key === ' ')          speakItem(items[idx]);
 });
 
