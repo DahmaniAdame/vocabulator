@@ -28,6 +28,11 @@ function playAudioFile(src, onEnded) {
 // ── Mute ──────────────────────────────────────────────────────────────────────
 var muted   = false;
 var btnMute = document.getElementById('btn-mute');
+
+// ── Auto-slide ────────────────────────────────────────────────────────────────
+var autoSlide        = false;
+var autoSlideTimer   = null;
+var slideGracePeriod = cfg.slideGracePeriod || 3000;
 btnMute.addEventListener('click', function() {
   muted = !muted;
   btnMute.innerHTML = '<i data-lucide="' + (muted ? 'volume-x' : 'volume-2') + '"></i>';
@@ -36,18 +41,36 @@ btnMute.addEventListener('click', function() {
   if (muted) stopAudio();
 });
 
-function speakItem(item) {
-  if (muted) return;
+function speakItem(item, onComplete) {
+  if (muted) { if (onComplete) onComplete(); return; }
   stopAudio();
   var audioFi = cfg.finnish && item.audio_fi;
   var audioEn = cfg.english && item.audio_en;
   if (audioFi) {
     playAudioFile(audioFi, audioEn ? function() {
-      pendingTimer = setTimeout(function() { pendingTimer = null; playAudioFile(audioEn, null); }, 500);
-    } : null);
+      pendingTimer = setTimeout(function() {
+        pendingTimer = null;
+        playAudioFile(audioEn, onComplete || null);
+      }, 500);
+    } : (onComplete || null));
   } else if (audioEn) {
-    playAudioFile(audioEn, null);
+    playAudioFile(audioEn, onComplete || null);
+  } else {
+    if (onComplete) onComplete();
   }
+}
+
+function clearAutoSlideTimer() {
+  if (autoSlideTimer) { clearTimeout(autoSlideTimer); autoSlideTimer = null; }
+}
+
+function scheduleAutoSlide() {
+  if (!autoSlide) return;
+  clearAutoSlideTimer();
+  autoSlideTimer = setTimeout(function() {
+    autoSlideTimer = null;
+    if (!animating) { lockNav(); showCard((idx + 1) % items.length, 'next'); }
+  }, slideGracePeriod);
 }
 
 // ── Contrast helper ───────────────────────────────────────────────────────────
@@ -145,7 +168,7 @@ function showCard(newIdx, direction) {
   }
 
   idx = newIdx;
-  speakItem(items[idx]);
+  speakItem(items[idx], scheduleAutoSlide);
 }
 
 // ── Navigation delay ──────────────────────────────────────────────────────────
@@ -174,7 +197,7 @@ function goNext() { if (!animating && !navLocked) { lockNav(); showCard((idx + 1
 function goPrev() { if (!animating && !navLocked) { lockNav(); showCard((idx - 1 + items.length) % items.length, 'prev'); } }
 
 // ── Navigation controls ───────────────────────────────────────────────────────
-wrap.addEventListener('click', function() { speakItem(items[idx]); });
+wrap.addEventListener('click', function() { clearAutoSlideTimer(); speakItem(items[idx], scheduleAutoSlide); });
 document.getElementById('nav-prev').addEventListener('click', function() { goPrev(); });
 document.getElementById('nav-next').addEventListener('click', function() { goNext(); });
 
@@ -185,10 +208,22 @@ document.addEventListener('keydown', function(e) {
   if (e.key === ' ')          speakItem(items[idx]);
 });
 
+// ── Auto-slide button ─────────────────────────────────────────────────────────
+var btnAutoSlide = document.getElementById('btn-autoslide');
+btnAutoSlide.addEventListener('click', function() {
+  autoSlide = !autoSlide;
+  btnAutoSlide.innerHTML = '<i data-lucide="' + (autoSlide ? 'pause' : 'play') + '"></i>';
+  if (typeof lucide !== 'undefined') lucide.createIcons({ nodes: [btnAutoSlide] });
+  btnAutoSlide.classList.toggle('active', autoSlide);
+  if (autoSlide) scheduleAutoSlide();
+  else clearAutoSlideTimer();
+});
+
 // ── Screen management ─────────────────────────────────────────────────────────
 function showScreen(id) {
   document.querySelectorAll('.screen').forEach(function(s) { s.classList.remove('active'); });
   document.getElementById(id).classList.add('active');
+  if (id === 'screen-picker') clearAutoSlideTimer();
 }
 
 // ── Start slideshow ───────────────────────────────────────────────────────────
