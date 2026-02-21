@@ -1,0 +1,86 @@
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{width:100%;height:100%;overflow:hidden;background:#0f172a;color:#fff;touch-action:manipulation}
+html *{font-family:'Google Sans','Segoe UI',system-ui,sans-serif}
+.screen{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center}
+.screen.active{display:flex}
+
+/* ── Picker ─────────────────────────────────────────────────────────────── */
+#screen-picker.active{display:flex;flex-direction:column;width:100vw;height:100vh;padding:0;background:#000}
+#category-grid{width:100%;height:100%;display:grid;grid-template-columns:repeat(2,1fr);grid-auto-rows:1fr;gap:0}
+@media(min-width:1024px){#category-grid{grid-template-columns:repeat(3,1fr)}}
+.cat-btn{position:relative;overflow:hidden;border:none;border-bottom:8px solid rgba(0,0,0,0.3);border-right:1px solid rgba(255,255,255,0.1);outline:none;cursor:pointer;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0;-webkit-tap-highlight-color:transparent;user-select:none;transition:filter 0.15s}
+.cat-btn:active{filter:brightness(0.8)}
+.cat-btn:active .cat-content{transform:scale(0.92)}
+.cat-icon{position:absolute;opacity:0.2;pointer-events:none}
+.cat-icon svg{width:var(--cat-icon-sz,48px);height:var(--cat-icon-sz,48px)}
+.cat-icon-1{top:10%;left:10%}
+.cat-icon-2{bottom:10%;right:10%}
+.cat-content{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;width:100%;transition:transform 0.15s}
+.cat-title{font-weight:900;text-transform:uppercase;letter-spacing:-0.03em;line-height:1;text-align:center;display:block}
+.cat-depth{position:absolute;inset:0;background:linear-gradient(to top right,rgba(0,0,0,0.2),transparent,rgba(255,255,255,0.1));pointer-events:none}
+.cat-hover{position:absolute;inset:0;background:rgba(255,255,255,0);transition:background 0.3s;pointer-events:none}
+.cat-btn:hover .cat-hover{background:rgba(255,255,255,0.05)}
+@keyframes iconFloat{0%,100%{transform:translateY(0) rotate(-5deg)}50%{transform:translateY(-12px) rotate(5deg)}}
+@keyframes titlePulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.03);opacity:0.95}}
+.cat-icon{animation:iconFloat 5s ease-in-out infinite}
+.cat-title{animation:titlePulse 4s ease-in-out infinite}
+
+/* ── Slideshow ───────────────────────────────────────────────────────────── */
+#screen-slideshow{background:#000}
+#card-wrap{position:absolute;inset:0;overflow:hidden;cursor:pointer}
+#nav-prev,#nav-next{position:absolute;top:0;height:100%;width:20%;z-index:10;background:#0000002e;border:none;cursor:pointer;-webkit-tap-highlight-color:transparent;outline:none;transition:opacity 0.4s}
+#nav-prev{left:0}
+#nav-next{right:0}
+#btn-mute{position:absolute;top:14px;left:50%;transform:translateX(-50%);z-index:20;background:rgba(0,0,0,0.32);border:none;border-radius:50%;width:48px;height:48px;cursor:pointer;color:#fff;display:flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent;outline:none;transition:background 0.15s}
+#btn-mute svg{width:22px;height:22px;stroke:currentColor;stroke-width:2;fill:none}
+#btn-mute.muted{background:rgba(180,0,0,0.55)}
+
+/* Card shared */
+.card{position:absolute;inset:0;display:flex;flex-direction:column;user-select:none;will-change:transform}
+
+/* With image */
+.card-has-image .card-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;pointer-events:none}
+.card-has-image .card-label{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(to top,rgba(0,0,0,0.88) 0%,rgba(0,0,0,0.3) 100%);padding:1.5rem 1rem 2.5rem;text-align:center;display:flex;flex-direction:column;gap:0.3rem}
+
+/* Without image */
+.card-no-image{align-items:center;justify-content:center;background:linear-gradient(135deg,#1e3a5f 0%,#0f172a 100%)}
+.card-no-image .card-label{text-align:center;padding:2rem;display:flex;flex-direction:column;gap:0.6rem}
+
+/* Color card */
+.card-color{align-items:center;justify-content:center}
+.card-color .card-label{text-align:center;padding:2rem;display:flex;flex-direction:column;gap:0.6rem}
+.card-color .lbl-fi,.card-color .lbl-en,.card-color .lbl-single{color:inherit}
+
+/* Number card */
+.card-number{background:#333;flex-direction:column;align-items:center;justify-content:center}
+.card-number-digit{font-size:55vh;font-weight:900;color:#fff;line-height:0.85;text-align:center;margin-bottom:40px}
+.card-number .card-label{text-align:center;padding:0.5rem 1rem 2rem;display:flex;flex-direction:column;gap:0.3rem}
+
+/* Letter card */
+.card-letter{background:#1a2744;flex-direction:column;align-items:center;justify-content:center;gap:0}
+.card-letter-upper{font-size:42vh;font-weight:900;color:#fff;line-height:0.85;text-align:center}
+.card-letter-lower{font-size:26vh;font-weight:700;color:#94a3b8;line-height:0.85;text-align:center}
+
+/* Label sizes — with image */
+.lbl-fi{font-size:clamp(2.5rem,10vmin,5rem);font-weight:800;color:#f1f5f9;line-height:1.1;letter-spacing:-0.01em}
+.lbl-en{font-size:clamp(1.8rem,7vmin,3.5rem);font-weight:600;color:#94a3b8;line-height:1.1}
+.lbl-single{font-size:clamp(3rem,12vmin,6rem);font-weight:800;color:#f1f5f9;line-height:1.1}
+
+/* Label sizes — without image or color card */
+.card-no-image .lbl-fi,.card-color .lbl-fi{font-size:clamp(3.5rem,15vmin,8rem)}
+.card-no-image .lbl-en,.card-color .lbl-en{font-size:clamp(2.5rem,10vmin,5rem)}
+.card-no-image .lbl-single,.card-color .lbl-single{font-size:clamp(4rem,18vmin,9rem)}
+
+/* Slide animations */
+@keyframes fromRight{from{transform:translateX(100%)}to{transform:translateX(0)}}
+@keyframes fromLeft {from{transform:translateX(-100%)}to{transform:translateX(0)}}
+@keyframes toLeft   {from{transform:translateX(0)}to{transform:translateX(-100%)}}
+@keyframes toRight  {from{transform:translateX(0)}to{transform:translateX(100%)}}
+.anim-in-next {animation:fromRight 0.28s ease-out both}
+.anim-out-next{animation:toLeft   0.28s ease-out both}
+.anim-in-prev {animation:fromLeft  0.28s ease-out both}
+.anim-out-prev{animation:toRight   0.28s ease-out both}
+
+/* Image fade-in */
+.card-img{opacity:0;transition:opacity 0.35s ease}
+.card-img.img-ready{opacity:1}
