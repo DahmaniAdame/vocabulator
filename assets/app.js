@@ -154,13 +154,11 @@ function showCard(newIdx, direction) {
   var oldCard = wrap.querySelector('.card');
   var newCard = buildCard(items[newIdx]);
 
-  if (oldCard && direction) {
-    var outCls = direction === 'next' ? 'anim-out-next' : 'anim-out-prev';
-    var inCls  = direction === 'next' ? 'anim-in-next'  : 'anim-in-prev';
-    oldCard.classList.add(outCls);
-    newCard.classList.add(inCls);
+  if (oldCard) {
+    oldCard.classList.add('anim-out');
+    newCard.classList.add('anim-in');
     wrap.appendChild(newCard);
-    setTimeout(function() { oldCard.remove(); animating = false; }, 280);
+    setTimeout(function() { oldCard.remove(); animating = false; }, 300);
   } else {
     wrap.innerHTML = '';
     wrap.appendChild(newCard);

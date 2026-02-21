@@ -74,15 +74,11 @@ html *{font-family:'Google Sans','Segoe UI',system-ui,sans-serif}
 .card-no-image .lbl-en,.card-color .lbl-en{font-size:clamp(2.5rem,10vmin,5rem)}
 .card-no-image .lbl-single,.card-color .lbl-single{font-size:clamp(4rem,18vmin,9rem)}
 
-/* Slide animations */
-@keyframes fromRight{from{transform:translateX(100%)}to{transform:translateX(0)}}
-@keyframes fromLeft {from{transform:translateX(-100%)}to{transform:translateX(0)}}
-@keyframes toLeft   {from{transform:translateX(0)}to{transform:translateX(-100%)}}
-@keyframes toRight  {from{transform:translateX(0)}to{transform:translateX(100%)}}
-.anim-in-next {animation:fromRight 0.28s ease-out both}
-.anim-out-next{animation:toLeft   0.28s ease-out both}
-.anim-in-prev {animation:fromLeft  0.28s ease-out both}
-.anim-out-prev{animation:toRight   0.28s ease-out both}
+/* Fade animations */
+@keyframes fadeIn {from{opacity:0}to{opacity:1}}
+@keyframes fadeOut{from{opacity:1}to{opacity:0}}
+.anim-in {animation:fadeIn  0.3s ease both}
+.anim-out{animation:fadeOut 0.3s ease both}
 
 /* Image fade-in */
 .card-img{opacity:0;transition:opacity 0.35s ease}
